@@ -1,0 +1,16 @@
+# 运行时生成的文件
+__pycache__/
+*.pyc
+*.pyo
+
+# 本地配置文件（含 API 密钥，绝对不要提交）
+.env
+.douyin-video/
+
+# 临时目录
+tmp*/
+output/
+
+# 系统文件
+.DS_Store
+Thumbs.db
