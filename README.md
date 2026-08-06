@@ -99,7 +99,7 @@ git clone https://github.com/zzybrim/douyin-obsidian.git .codex/skills/douyin-ob
 
 ### Obsidian 用户
 
-在 Obsidian 中使用此 skill，推荐通过 **Obsidian 的 AI 插件**（如 Copilot、Smart Connections 等支持 skill 规范的插件）来调用，将本 skill 安装到对应插件的 skill 目录即可。
+在 Obsidian 中使用此 skill，推荐通过 **Obsidian 的 AI 插件**（如 claudian、Copilot、Smart Connections 等支持 skill 规范的插件）来调用，将本 skill 安装到对应插件的 skill 目录即可。
 
 ## 安全说明
 
