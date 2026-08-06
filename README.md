@@ -15,25 +15,96 @@
 - 🔐 **安全存储**：API Key 仅保存在本地，不上传
 - ⚡ **一键安装**：提供自动安装脚本，自动配置 FFmpeg
 
+## 环境要求
+
+- Python 3.8+
+- FFmpeg（视频帖子语音识别必需，一键安装脚本会自动配置）
+- 硅基流动 API Key（仅视频帖子需要，[免费获取](https://cloud.siliconflow.cn/)）
+
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 克隆到 Agent Skills 目录
 
 ```bash
-git clone https://github.com/zzybrim/douyin-obsidian.git
-cd douyin-obsidian
+# Claude Code
+git clone https://github.com/zzybrim/douyin-obsidian.git ~/.claude/skills/douyin-obsidian
+
+# Codex CLI（项目级）
+git clone https://github.com/zzybrim/douyin-obsidian.git .codex/skills/douyin-obsidian
+```
+
+### 2. 安装依赖
+
+```bash
 python scripts/setup.py
 ```
 
-### 2. 配置 API Key（仅视频帖子需要）
+### 3. 配置 API Key（仅视频帖子需要）
 
-```bash
-python scripts/douyin_downloader.py --setup-key "你的硅基流动 API 密钥"
+向 Agent 发送抖音视频链接时，如果检测到未配置 API Key，会引导你完成首次配置：
+
+1. 打开 https://cloud.siliconflow.cn/ 注册账号
+2. 创建 API 密钥（以 `sk-` 开头）
+3. 把密钥粘贴给 Agent，自动保存到 `~/.douyin-video/config.json`
+
+## 使用方式
+
+配置完成后，向 AI Agent 发送抖音链接即可自动调用：
+
+```
+把这个视频转成文字：https://v.douyin.com/xxxxx/
 ```
 
-> 硅基流动 API 密钥免费获取：[https://cloud.siliconflow.cn/](https://cloud.siliconflow.cn/)
+Agent 会自动完成：解析链接 → 识别帖子类型 → 提取内容 → 整理成知识库笔记。
 
-### 3. 使用示例
+## 工作原理
+
+### 前置检查
+
+每次对话先解析链接，识别帖子类型：
+
+```bash
+python scripts/douyin_downloader.py --link "抖音分享链接" --action info
+```
+
+返回帖子类型（视频/图文）、ID、标题。无需 API Key。
+
+### 视频帖子处理流程
+
+```
+分享链接 → 无水印下载视频 → 提取音频 → 语音识别 → 文案提取 → 结构化 Markdown 笔记
+```
+
+需要 API Key，输出：
+- `transcript.md`（包含逐字稿）
+- `<视频ID>.mp4`（使用 `--save-video` 时保存）
+
+### 图文帖子处理流程
+
+```
+分享链接 → 提取页面正文 → 批量下载图片 → 结构化 Markdown 笔记
+```
+
+无需 API Key，输出：
+- `transcript.md`（包含正文和图片引用）
+- `image_001.jpg` 等图片文件
+
+## 输出结构
+
+```
+output/
+├── <视频ID或笔记ID>/
+│   ├── transcript.md      # 文案内容
+│   ├── image_001.jpg      # 下载的图片（图文帖子）
+│   └── <视频ID>.mp4       # 视频文件（可选）
+└── ...
+```
+
+## Obsidian 用户
+
+在 Obsidian 中使用此 skill，推荐通过 **Obsidian 的 AI 插件**（如 claudian、Copilot、Smart Connections 等支持 skill 规范的插件）来调用，将本 skill 安装到对应插件的 skill 目录即可。
+
+## 命令行使用
 
 ```bash
 # 查看帖子信息（无需 API Key）
@@ -44,69 +115,61 @@ python scripts/douyin_downloader.py --link "https://v.douyin.com/xxxxx/" --actio
 
 # 提取文案（需要 API Key）
 python scripts/douyin_downloader.py --link "https://v.douyin.com/xxxxx/" --action extract --output ./output
+
+# 图文帖子提取（无需 API Key）
+python scripts/douyin_downloader.py --link "https://v.douyin.com/xxxxx/" --action extract --output ./output --quiet
+
+# 持久化 API Key（首次配置）
+python scripts/douyin_downloader.py --setup-key "你的硅基流动密钥"
 ```
 
-## 输出结构
+## Python API
 
-```
-output/
-├── <视频ID>/
-│   ├── transcript.md      # 文案内容
-│   └── <视频ID>.mp4       # 视频文件（使用 --save-video 时保存）
-└── ...
-```
+```python
+from douyin_downloader import get_video_info, download_video, extract_text
 
-## 技术栈
+info = get_video_info("抖音分享链接")
 
-- Python 3.8+
-- requests
-- ffmpeg-python
-- 硅基流动 API（语音识别）
-
-## 安装依赖
-
-### 自动安装（推荐）
-
-```bash
-python scripts/setup.py
+if info.get("type") == "video":
+    video_path = download_video("抖音分享链接", output_dir="./videos")
+    result = extract_text("抖音分享链接", output_dir="./output")
+else:
+    result = extract_text("抖音分享链接", output_dir="./output")
 ```
 
-### 手动安装
+## 常见问题
 
-```bash
-pip install requests ffmpeg-python -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
+### 无法解析链接
 
-## 作为 AI Agent Skill 使用
+- 确保链接是有效的抖音分享链接
+- 链接格式通常为 `https://v.douyin.com/xxxxx/` 或完整的抖音视频 URL
 
-本 skill 适用于 **Claude Code**、**Codex CLI** 等支持 skill 规范的 AI Agent 工具。
+### 提取文案失败
 
-### Claude Code / Codex CLI
+- 确认 API Key 已配置（仅视频帖子需要）
+- 运行 `python douyin_downloader.py --setup-key "你的密钥"`
+- 确保 API 密钥有效且有足够的配额
+- 确保 FFmpeg 已正确安装（运行 `python scripts/setup.py` 验证）
 
-将本仓库克隆到 AI Agent 工具的 skills 目录下：
+### 图文帖子提取失败
 
-```bash
-# Claude Code
-git clone https://github.com/zzybrim/douyin-obsidian.git ~/.claude/skills/douyin-obsidian
+- 确认链接指向的是图文帖子（多图帖子）
+- 图文帖子依赖抖音页面数据，如果页面结构变更可能失效
+- 检查输出目录是否有写入权限
 
-# Codex CLI（项目级）
-git clone https://github.com/zzybrim/douyin-obsidian.git .codex/skills/douyin-obsidian
-```
+### FFmpeg 相关错误
 
-配置完成后，向 Agent 发送抖音链接即可自动调用：
-
-> 把这个视频转成文字：https://v.douyin.com/xxxxx/
-
-### Obsidian 用户
-
-在 Obsidian 中使用此 skill，推荐通过 **Obsidian 的 AI 插件**（如 claudian、Copilot、Smart Connections 等支持 skill 规范的插件）来调用，将本 skill 安装到对应插件的 skill 目录即可。
+- Windows：确认 `ffmpeg.exe` 已存在于 Python Scripts 目录
+- macOS：`brew install ffmpeg`
+- Linux：`apt install ffmpeg`
 
 ## 安全说明
 
-- API Key 仅保存在本地 `~/.douyin-video/config.json`，不会上传
-- 仅通过 HTTPS 发送给硅基流动 API
-- 不包含 `subprocess`/`socket`/`pickle`/`eval`/`exec` 等危险调用
-- 图文帖子不涉及任何 API 调用，仅提取公开数据
+- **API Key 存储**：仅保存在用户本地 `~/.douyin-video/config.json`，不会被上传或同步
+- **密钥传输**：仅通过 HTTPS `Authorization: Bearer` 头发送给硅基流动 API，不写入任何日志
+- **外发域名**：仅 `api.siliconflow.cn`（语音识别）和 `www.iesdouyin.com`（视频/图文解析）
+- **无危险调用**：脚本不包含 `subprocess`/`socket`/`pickle`/`eval`/`exec` 等调用
+- **图文帖子**：不涉及任何 API 调用，仅从抖音页面提取公开数据
 
 ## 注意事项
 
