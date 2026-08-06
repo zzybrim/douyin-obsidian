@@ -77,20 +77,29 @@ python scripts/setup.py
 pip install requests ffmpeg-python -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-## 作为 Obsidian Skill 使用
+## 作为 AI Agent Skill 使用
 
-将本仓库克隆到你的 Obsidian vault 的 `.claude/skills/` 目录下：
+本 skill 适用于 **Claude Code**、**Codex CLI** 等支持 skill 规范的 AI Agent 工具。
+
+### Claude Code / Codex CLI
+
+将本仓库克隆到 AI Agent 工具的 skills 目录下：
 
 ```bash
-cd <你的vault路径>/.claude/skills
-git clone https://github.com/zzybrim/douyin-obsidian.git
+# Claude Code
+git clone https://github.com/zzybrim/douyin-obsidian.git ~/.claude/skills/douyin-obsidian
+
+# Codex CLI（项目级）
+git clone https://github.com/zzybrim/douyin-obsidian.git .codex/skills/douyin-obsidian
 ```
 
-然后向 Claude 发送抖音链接，例如：
+配置完成后，向 Agent 发送抖音链接即可自动调用：
 
 > 把这个视频转成文字：https://v.douyin.com/xxxxx/
 
-Claude 会自动调用此 skill 进行处理。
+### Obsidian 用户
+
+在 Obsidian 中使用此 skill，推荐通过 **Obsidian 的 AI 插件**（如 Copilot、Smart Connections 等支持 skill 规范的插件）来调用，将本 skill 安装到对应插件的 skill 目录即可。
 
 ## 安全说明
 
