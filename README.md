@@ -1,6 +1,10 @@
 # douyin-obsidian
 
-[douyin-obsidian](https://github.com/zzybrim/douyin-obsidian) 是一个 Claude Code Skill（基于开源项目 [yzfly/douyin-mcp-server](https://github.com/yzfly/douyin-mcp-server) 二次开发），让你在 Obsidian 中一键提取抖音视频文案和图文内容。
+[douyin-obsidian](https://github.com/zzybrim/douyin-obsidian) 是一个 Claude Code Skill（基于 [yzfly/douyin-mcp-server](https://github.com/yzfly/douyin-mcp-server) 二次开发），**在原作者视频提取的基础上，新增了图文帖子提取能力**。
+
+> 与原项目的区别：
+> - **新增图文帖子提取**：支持抖音图文笔记的正文提取与图片批量下载，原项目仅支持视频
+> - **结构化归档到 Obsidian**：一键提取视频文案和图文内容，根据内容文字总量自动生成轻量/标准/深度三档结构化 Markdown 文档，直接保存至 Obsidian 知识库
 
 从抖音分享链接自动识别内容类型：视频帖子走「无水印下载 → 语音识别 → 文案提取」管线，图文帖子走「正文提取 → 图片批量下载」管线，结构化 Markdown 归档，一键完成。
 
