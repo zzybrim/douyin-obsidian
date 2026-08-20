@@ -12,11 +12,12 @@ compatibility: 需要 Python 3.8+，需联网访问抖音。视频文案提取�
 ### 步骤 1：解析链接，识别帖子类型
 
 ```bash
-cd scripts
-python douyin_downloader.py --link "抖音分享链接" --action info
+uv run python .claude/skills/douyin-obsidian/scripts/douyin_pipeline.py --link "抖音分享链接" --action info
 ```
 
 返回帖子类型（视频/图文）、ID、标题。**无需 API Key，先解析再决定后续步骤。**
+
+**自动降级机制**：抖音反爬升级后标准解析（`_ROUTER_DATA`）可能失败，此时管线自动降级到浏览器方案（真实 Chrome + detail API，带冷却重试），全程无需手动干预，只需本机装有 Chrome。
 
 ### 步骤 2：根据类型准备 API Key（仅视频帖子需要）
 
@@ -83,6 +84,8 @@ uv run python .claude/skills/douyin-obsidian/scripts/douyin_downloader.py --link
 ```
 
 FFmpeg/FFprobe 二进制位于 `.venv/Scripts/`（`uv run` 会自动加入 PATH）。若在其它项目目录运行 `uv run`，会解析到该项目的环境而找不到本 skill 依赖，务必从本项目根目录运行。
+
+**浏览器降级方案依赖**：`douyin_pipeline.py` 在标准解析被反爬拦截时，会用 Playwright 驱动**系统已安装的 Chrome**（非 Playwright 内置浏览器），无需额外安装浏览器。依赖 `playwright` 包由 setup.py 自动安装。
 
 ### 一键安装（通用）
 
@@ -209,32 +212,21 @@ python douyin_downloader.py --link "<分享链接>" --action info
 
 返回帖子类型（视频/图文）、ID、标题。解析失败就不用往下走了。如果识别为**图文帖子**，跳转到步骤 3。
 
-### 步骤 2：视频帖子 - 提取文案
+### 步骤 2：提取内容（自动识别类型）
 
 ```bash
-uv run python .claude/skills/douyin-obsidian/scripts/douyin_downloader.py \
-  --link "<分享链接>" --action extract \
-  --output "assets/<笔记名>" --quiet
+uv run python .claude/skills/douyin-obsidian/scripts/douyin_pipeline.py \
+  --link "<分享链接>" --output "assets/<笔记名>" --quiet
 ```
 
+- **自动识别帖子类型**：视频帖子走「下载无水印视频 → 提取音频 → 语音识别 → transcript」；图文帖子走「提取正文 → 批量下载图片」
 - **安静模式 `--quiet` 必加**：否则下载进度条会输出大量字符
 - 输出到 `assets/<笔记名>/`（见「输出位置约定」）
+- **自动降级**：标准解析失败（抖音反爬）时自动切浏览器方案，无需重试或手动干预
 
-产物：`assets/<笔记名>/transcript.md`
+产物：`assets/<笔记名>/transcript.md` + `transcript_raw.txt` + `video_info.json`（+ 视频 `mp4` 或 `image_0xx` 图片）
 
-### 步骤 3：图文帖子 - 提取正文和图片
-
-```bash
-uv run python .claude/skills/douyin-obsidian/scripts/douyin_downloader.py \
-  --link "<分享链接>" --action extract \
-  --output "assets/<笔记名>" --quiet
-```
-
-- **无需 API Key**，图文帖子直接提取页面正文并批量下载图片
-
-产物：`assets/<笔记名>/transcript.md` + `image_001.jpg` 等图片文件
-
-### 步骤 4：结构化整理
+### 步骤 3：结构化整理
 
 读取 transcript.md，加工成知识库笔记。**不要直接搬运原始转录**，要做两层：
 
@@ -326,7 +318,7 @@ tags: [...]
 - **轻量/标准档图片放末尾**：正文中不插入图片，所有图片统一放在文末「原始图片」区块
 - **深度档图文就近**：当文本内容较多、需要对照理解时，图片可插入在对应位置
 
-### 步骤 5：归档与索引
+### 步骤 4：归档与索引
 
 - 笔记存到项目根：`douyin-obsidian/<内容主题概括>-<YYYYMMDD>.md`
 - 原始素材与副产物（视频/图片/转录稿/图表）**保留在 `assets/<笔记名>/`**，不删除、不移动
@@ -396,6 +388,9 @@ transcript.md 格式：
 
 - 确保链接是有效的抖音分享链接
 - 链接格式通常为 `https://v.douyin.com/xxxxx/` 或完整的抖音视频 URL
+- 标准解析失败（抖音反爬 JSVM 壳）时，`douyin_pipeline.py` 会自动降级浏览器方案，**无需手动处理**
+- 若浏览器方案也失败（连续风控 403），脚本会提示"标准解析与浏览器方案均失败"，等待几分钟后重试即可
+- 浏览器方案需要本机安装 Chrome（Playwright 驱动系统 Chrome，非内置浏览器）
 
 ### 提取文案失败
 
