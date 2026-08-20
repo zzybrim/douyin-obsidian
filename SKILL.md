@@ -3,7 +3,6 @@ name: douyin-obsidian
 description: "抖音内容提取与归档工具（视频 + 图文）。从抖音分享链接解析内容：视频帖子支持无水印下载、语音识别提取口播文案；图文帖子提取正文文字、批量下载图片。结构化归档到 Obsidian vault。触发场景：用户说'把这个视频转成文字''扒一下这个帖子''图片里说了什么''帮我保存到笔记''下载这个抖音视频''提取口播''转文字版''整理到知识库''存到 Obsidian''保存到 raw-data''发我文案''整理一下'；用户要求下载抖音无水印视频、保存图文图片、批量整理抖音收藏/喜欢的内容。当用户需要处理抖音链接、提取文案、转录语音、下载视频、下载图片、或批量整理抖音内容到 Obsidian 时使用此 skill。"
 compatibility: 需要 Python 3.8+，需联网访问抖音。视频文案提取需要硅基流动 API
 ---
-
 # 抖音内容提取与归档（视频 + 图文）
 
 从抖音分享链接 → 自动识别内容类型 → 视频帖子走「无水印下载 → 语音识别 → 文案提取」管线，图文帖子走「正文提取 → 图片批量下载」管线 → 结构化 Markdown 归档，一键完成。
@@ -21,10 +20,10 @@ python douyin_downloader.py --link "抖音分享链接" --action info
 
 ### 步骤 2：根据类型准备 API Key（仅视频帖子需要）
 
-| 帖子类型 | 是否需要 API Key | 说明 |
-|---------|----------------|------|
-| 视频 | 需要 | 语音识别必需，见下方配置流程 |
-| 图文 | 不需要 | 直接提取正文和图片 |
+| 帖子类型 | 是否需要 API Key | 说明                         |
+| -------- | ---------------- | ---------------------------- |
+| 视频     | 需要             | 语音识别必需，见下方配置流程 |
+| 图文     | 不需要           | 直接提取正文和图片           |
 
 **视频帖子首次配置流程（对话交互）**：
 
@@ -39,7 +38,7 @@ python douyin_downloader.py --link "抖音分享链接" --action info
 **首次配置流程（对话交互）**：
 
 ```
-🎬 检测到你还没有配置硅基流动 API Key。
+🎬 检测到你还没有配置 API Key。
 
 这是视频文案提取必需的凭证，图文帖子不需要。免费获取，2 分钟搞定：
 
@@ -68,7 +67,24 @@ python douyin_downloader.py --setup-key "<用户提供的密钥>"
 
 ## 环境安装
 
-### 一键安装（推荐）
+### uv 环境（本项目推荐）
+
+本项目使用 [uv](https://docs.astral.sh/uv/) 管理 Python 环境，所有命令从项目根目录（`douyin-obsidian/`）运行：
+
+```bash
+# 一键安装（uv 自动解析项目 .venv）
+uv run python .claude/skills/douyin-obsidian/scripts/setup.py
+```
+
+运行脚本时统一使用 `uv run python <脚本路径>`，例如：
+
+```bash
+uv run python .claude/skills/douyin-obsidian/scripts/douyin_downloader.py --link "抖音分享链接" --action info
+```
+
+FFmpeg/FFprobe 二进制位于 `.venv/Scripts/`（`uv run` 会自动加入 PATH）。若在其它项目目录运行 `uv run`，会解析到该项目的环境而找不到本 skill 依赖，务必从本项目根目录运行。
+
+### 一键安装（通用）
 
 ```bash
 python scripts/setup.py
@@ -159,6 +175,30 @@ else:
     result = extract_text("抖音分享链接", output_dir="./output")
 ```
 
+## 输出位置约定（重要）
+
+所有任务产物统一放在项目根目录（`douyin-obsidian/`）下，结构如下：
+
+```
+douyin-obsidian/
+├── <内容主题概括>-<日期>.md      # 笔记文件：主题概括 + 日期命名
+└── assets/
+    └── <内容主题概括>-<日期>/    # 每个任务一个附件子文件夹（Obsidian 规范命名 assets）
+        ├── <帖子ID>.mp4          # 下载的视频
+        ├── transcript.md         # 文案/逐字稿
+        ├── transcript_raw.txt    # 原始转录文本
+        ├── video_info.json       # 帖子信息（含无水印地址）
+        ├── image_001.jpg         # 图文帖子的图片
+        └── 图表/文档等副产物       # 思维导图、表格等生成物
+```
+
+规则：
+
+- **笔记**：存到项目根，文件名 = 内容主题概括 + `-<YYYYMMDD>`（如 `功能测试用例编写方法-20260820.md`）
+- **副产物**（视频/图片/转录稿/图表等）：一律放进 `assets/<笔记名>/` 子文件夹，**不删除、不移动**
+- **笔记必须链接所有产物**：笔记末尾设「📎 原始素材与附件」区块，用 wikilink 列出全部产物——图片用 `![[xxx.png]]` 嵌入，视频用 `[[xxx.mp4]]` 链接，HTML/文档用 `[[xxx.html]]` 链接
+- 每次任务完成后，**必须向用户汇报产物清单和完整路径**
+
 ## 执行流程
 
 ### 步骤 1：解析链接，识别类型
@@ -172,27 +212,27 @@ python douyin_downloader.py --link "<分享链接>" --action info
 ### 步骤 2：视频帖子 - 提取文案
 
 ```bash
-python douyin_downloader.py \
+uv run python .claude/skills/douyin-obsidian/scripts/douyin_downloader.py \
   --link "<分享链接>" --action extract \
-  --output "<临时目录>" --quiet
+  --output "assets/<笔记名>" --quiet
 ```
 
 - **安静模式 `--quiet` 必加**：否则下载进度条会输出大量字符
-- 先输出到临时目录，不要直接写进 vault——要经过整理再入库
+- 输出到 `assets/<笔记名>/`（见「输出位置约定」）
 
-产物：`<临时目录>/<视频ID>/transcript.md`
+产物：`assets/<笔记名>/transcript.md`
 
 ### 步骤 3：图文帖子 - 提取正文和图片
 
 ```bash
-python douyin_downloader.py \
+uv run python .claude/skills/douyin-obsidian/scripts/douyin_downloader.py \
   --link "<分享链接>" --action extract \
-  --output "<临时目录>" --quiet
+  --output "assets/<笔记名>" --quiet
 ```
 
 - **无需 API Key**，图文帖子直接提取页面正文并批量下载图片
 
-产物：`<临时目录>/<笔记ID>/transcript.md` + `image_001.jpg` 等图片文件
+产物：`assets/<笔记名>/transcript.md` + `image_001.jpg` 等图片文件
 
 ### 步骤 4：结构化整理
 
@@ -200,6 +240,14 @@ python douyin_downloader.py \
 
 1. **提炼层**：核心观点、结构化表格、方法论要点
 2. **原文层**：完整原始文案放进 `<details>` 折叠块保留
+
+**回答质量标准（硬性要求，每条笔记必过）**：
+
+1. **满分回答**：交付直接可用的成品——有结论、有依据、有行动指引，像一篇能直接拿去用/转发/复习的笔记，而不是流水账或草稿
+2. **实战经历感**：提炼时注入真实场景细节与判断——具体数字、踩坑点、对比结论、经验谈，避免教科书式空泛叙述（"要重视""要严谨"这类口号没有价值）
+3. **完整不遗漏**：原文所有关键信息必须保留——核心观点、数据、步骤、金句一个都不能丢；提炼层拿不准是否重要的，保留到原文折叠块，宁可多留不可少收
+
+收尾自检：写完笔记后对照原文检查一遍——有没有漏掉的关键点？有没有空话？用户读完是否可以直接照做？
 
 **视频帖子**：读取语音逐字稿，提炼内容。
 **图文帖子**：读取 desc 文案 + 读取原始图片（用视觉能力），提炼图片中的表格和数据。
@@ -280,10 +328,11 @@ tags: [...]
 
 ### 步骤 5：归档与索引
 
-- 存入 `0-raw-data/` 对应子目录，三位数字前缀命名，如 `001-douyin-self-integrity-scale.md`
-- 图文帖子需将下载的图片一并放入附件目录
-- 更新 `INDEX.md` 中对应目录的条目
-- 清理临时目录
+- 笔记存到项目根：`douyin-obsidian/<内容主题概括>-<YYYYMMDD>.md`
+- 原始素材与副产物（视频/图片/转录稿/图表）**保留在 `assets/<笔记名>/`**，不删除、不移动
+- 笔记中通过 wikilink（`![[文件名]]`）引用 assets 中的图片，Obsidian 会全库解析
+- 更新 `INDEX.md` 中对应目录的条目（如存在）
+- 最后向用户汇报完整的产物位置清单
 
 ## 输出格式
 
