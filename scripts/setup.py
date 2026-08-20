@@ -22,7 +22,7 @@ MIN_PYTHON = (3, 8)
 PIP_PACKAGES = ["requests", "ffmpeg-python"]
 PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
 PYTHON_DIR = Path(sys.executable).parent
-FFMPEG_TARGET = PYTHON_DIR / "Scripts" / "ffmpeg.exe"
+FFMPEG_TARGET = Path(sys.prefix) / "Scripts" / "ffmpeg.exe"
 
 
 def check_python_version():
@@ -69,8 +69,15 @@ def install_ffmpeg():
 
     # 查找 site-packages 中的 ffmpeg 二进制
     import site
-    site_packages = Path(site.getsitepackages()[0])
-    ffmpeg_binaries = list(site_packages.glob("imageio_ffmpeg/binaries/ffmpeg*.exe"))
+    ffmpeg_binaries = []
+    for pkg_dir in site.getsitepackages():
+        ffmpeg_binaries.extend(Path(pkg_dir).glob("imageio_ffmpeg/binaries/ffmpeg*.exe"))
+    if not ffmpeg_binaries:
+        try:
+            import imageio_ffmpeg
+            ffmpeg_binaries = [Path(imageio_ffmpeg.get_ffmpeg_exe())]
+        except Exception:
+            pass
 
     if not ffmpeg_binaries:
         print("[ERROR] 未找到 FFmpeg 二进制文件")
