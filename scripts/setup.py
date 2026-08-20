@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 
 MIN_PYTHON = (3, 8)
-PIP_PACKAGES = ["requests", "ffmpeg-python"]
+PIP_PACKAGES = ["requests", "ffmpeg-python", "playwright"]
 PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
 PYTHON_DIR = Path(sys.executable).parent
 FFMPEG_TARGET = Path(sys.prefix) / "Scripts" / "ffmpeg.exe"

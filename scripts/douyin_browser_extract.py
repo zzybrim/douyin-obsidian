@@ -111,14 +111,23 @@ def extract(share_url: str, timeout_ms: int = 45000) -> dict:
             video = a.get("video", {})
             play_urls = video.get("play_addr", {}).get("url_list", [])
             covers = video.get("cover", {}).get("url_list", [])
-            return {
+            images = a.get("images", [])
+
+            base = {
                 "video_id": a.get("aweme_id"),
                 "desc": a.get("desc", ""),
                 "author": a.get("author", {}).get("nickname", ""),
                 "duration_ms": a.get("duration", 0),
-                "play_url": play_urls[0] if play_urls else "",
                 "cover_url": covers[0] if covers else "",
             }
+            # 图文帖子: images 字段存在时优先（video 字段只是背景音乐）
+            if images:
+                base["images"] = [
+                    img["url_list"][0] for img in images if img.get("url_list")
+                ]
+                return base
+            base["play_url"] = play_urls[0] if play_urls else ""
+            return base
         finally:
             browser.close()
 
