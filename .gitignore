@@ -9,6 +9,7 @@ __pycache__/
 
 # 临时目录
 tmp*/
+.tmp/
 output/
 
 # 系统文件
