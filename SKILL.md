@@ -188,18 +188,20 @@ douyin-obsidian/
 └── assets/
     └── <内容主题概括>-<日期>/    # 每个任务一个附件子文件夹（Obsidian 规范命名 assets）
         ├── <帖子ID>.mp4          # 下载的视频
+        ├── <帖子ID>.mp3          # 提取的音频
         ├── transcript.md         # 文案/逐字稿
         ├── transcript_raw.txt    # 原始转录文本
         ├── video_info.json       # 帖子信息（含无水印地址）
-        ├── image_001.jpg         # 图文帖子的图片
+        ├── <帖子ID>_image_001.jpg # 图文帖子的图片（文件名必须带帖子 ID）
         └── 图表/文档等副产物       # 思维导图、表格等生成物
 ```
 
 规则：
 
 - **笔记**：存到项目根，文件名 = 内容主题概括 + `-<YYYYMMDD>`（如 `功能测试用例编写方法-20260820.md`）
+- **媒体产物文件名必须带帖子 ID**：视频/音频用 `<帖子ID>.mp4` / `<帖子ID>.mp3`，图文图片用 `<帖子ID>_image_001.jpg`（三位补零序号）。**不要用 `image_001.jpg` 这类通用名**——多篇图文笔记会重名，Obsidian 按文件名解析 wikilink 时会串图
 - **副产物**（视频/图片/转录稿/图表等）：一律放进 `assets/<笔记名>/` 子文件夹，**不删除、不移动**
-- **笔记必须链接所有产物**：笔记末尾设「📎 原始素材与附件」区块，用 wikilink 列出全部产物——图片用 `![[xxx.png]]` 嵌入，视频用 `[[xxx.mp4]]` 链接，HTML/文档用 `[[xxx.html]]` 链接
+- **笔记必须链接所有产物**：笔记末尾设「📎 原始素材与附件」区块，用 wikilink 列出全部产物——图片用 `![[<帖子ID>_image_001.jpg]]` 嵌入，视频用 `[[<帖子ID>.mp4]]` 链接，HTML/文档用 `[[xxx.html]]` 链接
 - 每次任务完成后，**必须向用户汇报产物清单和完整路径**
 
 ## 执行流程
@@ -224,7 +226,7 @@ uv run python .claude/skills/douyin-obsidian/scripts/douyin_pipeline.py \
 - 输出到 `assets/<笔记名>/`（见「输出位置约定」）
 - **自动降级**：标准解析失败（抖音反爬）时自动切浏览器方案，无需重试或手动干预
 
-产物：`assets/<笔记名>/transcript.md` + `transcript_raw.txt` + `video_info.json`（+ 视频 `mp4` 或 `image_0xx` 图片）
+产物：`assets/<笔记名>/transcript.md` + `transcript_raw.txt` + `video_info.json`（+ 视频 `<帖子ID>.mp4` 或图文 `<帖子ID>_image_0xx.jpg` 图片）
 
 ### 步骤 3：结构化整理
 
@@ -345,9 +347,9 @@ output/
 │   └── transcript.md              # Markdown 格式文案文件
 ├── 7581044356631612699/           # 图文帖子示例
 │   ├── transcript.md              # 正文内容
-│   ├── image_001.jpg              # 下载的图片
-│   ├── image_002.jpg
-│   └── image_003.jpg
+│   ├── 7581044356631612699_image_001.jpg   # 下载的图片（带帖子 ID）
+│   ├── 7581044356631612699_image_002.jpg
+│   └── 7581044356631612699_image_003.jpg
 └── ...
 ```
 
@@ -364,8 +366,8 @@ output/
 ```
 <笔记ID>/
 ├── transcript.md                   # 包含正文和图片引用
-├── image_001.jpg                   # 下载的图片（格式可能为 jpg/webp/png）
-├── image_002.jpg
+├── <帖子ID>_image_001.jpg           # 下载的图片（格式可能为 jpg/webp/png）
+├── <帖子ID>_image_002.jpg
 └── ...
 ```
 
@@ -388,7 +390,7 @@ transcript.md 格式：
 
 ## 原始图片
 
-![图片1](image_001.webp)
+![图片1](7581044356631612699_image_001.webp)
 ```
 
 ## 常见问题

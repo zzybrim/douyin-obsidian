@@ -118,7 +118,9 @@ def _video_transcript_md(info: dict, text: str) -> str:
 
 def _note_transcript_md(info: dict, text: str, out_dir: Path) -> str:
     """图文帖子 transcript.md（含正文 + 图片引用）"""
-    images = sorted(out_dir.glob("image_*"))
+    note_id = info.get("video_id", "")
+    pattern = f"{note_id}_image_*" if note_id else "image_*"
+    images = sorted(out_dir.glob(pattern))
     image_refs = "\n".join(f"![图片{i + 1}]({img.name})" for i, img in enumerate(images))
     return (
         f"# {info['title']}\n\n"
