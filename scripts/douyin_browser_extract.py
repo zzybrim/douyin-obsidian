@@ -33,18 +33,21 @@ FETCH_JS = """async (vid) => {
 }"""
 
 
-def _extract_video_id(page) -> str:
-    """从当前页面 URL 或 _ROUTER_DATA 提取 video_id"""
-    m = re.search(r"/video/(\d+)", page.url)
+def _extract_post_id(page) -> str:
+    """从当前页面 URL 或 _ROUTER_DATA 提取帖子 ID（视频 /video/ 与图文 /note/ 均适用）"""
+    m = re.search(r"/(?:video|note)/(\d+)", page.url)
     if m:
         return m.group(1)
     try:
         rd = page.evaluate("window._ROUTER_DATA ? JSON.stringify(window._ROUTER_DATA) : null")
         if rd:
             data = json.loads(rd)
-            page_data = data.get("loaderData", {}).get("video_(id)/page", {})
-            if page_data.get("itemId"):
-                return str(page_data["itemId"])
+            loader = data.get("loaderData", {})
+            # 图文帖子的 loaderData key 是 note_(id)/page，视频是 video_(id)/page
+            for key in ("video_(id)/page", "note_(id)/page"):
+                page_data = loader.get(key, {})
+                if page_data.get("itemId"):
+                    return str(page_data["itemId"])
     except Exception:
         pass
     return ""
@@ -81,7 +84,7 @@ def extract(share_url: str, timeout_ms: int = 45000) -> dict:
             # 2) 访问分享链接，解析 video_id
             page.goto(share_url, wait_until="domcontentloaded", timeout=60000)
             page.wait_for_timeout(3000)
-            video_id = _extract_video_id(page)
+            video_id = _extract_post_id(page)
             if not video_id:
                 return {}
 

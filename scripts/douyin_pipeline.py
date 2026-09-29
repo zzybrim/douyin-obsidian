@@ -31,6 +31,7 @@ from douyin_downloader import DouyinProcessor, load_persisted_api_key
 from douyin_browser_extract import extract as browser_extract
 
 MAX_BROWSER_ATTEMPTS = 6
+MAX_DOWNLOAD_ATTEMPTS = 4
 
 
 def _log(quiet: bool, msg: str):
@@ -117,7 +118,9 @@ def _video_transcript_md(info: dict, text: str) -> str:
 
 def _note_transcript_md(info: dict, text: str, out_dir: Path) -> str:
     """图文帖子 transcript.md（含正文 + 图片引用）"""
-    images = sorted(out_dir.glob("image_*"))
+    note_id = info.get("video_id", "")
+    pattern = f"{note_id}_image_*" if note_id else "image_*"
+    images = sorted(out_dir.glob(pattern))
     image_refs = "\n".join(f"![图片{i + 1}]({img.name})" for i, img in enumerate(images))
     return (
         f"# {info['title']}\n\n"
@@ -132,11 +135,34 @@ def _note_transcript_md(info: dict, text: str, out_dir: Path) -> str:
     )
 
 
-def process_video(processor: DouyinProcessor, video_info: dict, out_dir: Path, quiet: bool) -> str:
-    """下载视频 → 提取音频 → 语音识别 → 保存 transcript"""
+def process_video(processor: DouyinProcessor, video_info: dict, out_dir: Path, quiet: bool,
+                  share_url: str = None) -> str:
+    """下载视频 → 提取音频 → 语音识别 → 保存 transcript
+
+    下载遇 403（CDN 限流）时：冷却后重新走浏览器提取拿新播放地址，重试下载。
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
-    _log(quiet, "下载视频...")
-    video_path = processor.download_video(video_info, out_dir, show_progress=not quiet)
+    video_path = None
+    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+        _log(quiet, f"下载视频 [{attempt}/{MAX_DOWNLOAD_ATTEMPTS}]...")
+        try:
+            video_path = processor.download_video(video_info, out_dir, show_progress=not quiet)
+            break
+        except Exception as e:
+            _log(quiet, f"  下载失败: {e}")
+            if attempt >= MAX_DOWNLOAD_ATTEMPTS:
+                raise
+            if share_url:
+                wait = 20 * attempt
+                _log(quiet, f"  疑似 CDN 限流，{wait}s 后重新获取播放地址...")
+                time.sleep(wait)
+                fresh = browser_info_with_retry(share_url, quiet)
+                if fresh and fresh.get("play_url"):
+                    video_info = _to_video_info(fresh, share_url)
+                else:
+                    _log(quiet, "  重新获取播放地址失败，继续重试下载...")
+    if video_path is None:
+        raise Exception("视频下载多次失败，请稍后再试")
     _log(quiet, "提取音频...")
     audio_path = processor.extract_audio(video_path, show_progress=not quiet)
     _log(quiet, "语音识别（硅基流动）...")
@@ -204,7 +230,7 @@ def main():
     if info.get("type") == "note":
         text = process_note(processor, info, out_dir, args.quiet)
     else:
-        text = process_video(processor, info, out_dir, args.quiet)
+        text = process_video(processor, info, out_dir, args.quiet, share_url=args.link)
     _save_meta(info, args.link, out_dir, degraded)
     mode = "浏览器降级" if degraded else "标准解析"
     _log(args.quiet, f"✅ 完成（{mode}），文案 {len(text)} 字，产物在 {out_dir}")

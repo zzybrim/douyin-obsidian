@@ -276,6 +276,9 @@ class DouyinProcessor:
         if not image_urls:
             return []
 
+        # 文件名带帖子 ID，避免多篇图文笔记之间 image_001.jpg 重名（Obsidian 按文件名解析 wikilink 会串图）
+        note_id = note_info.get("video_id", "")
+        prefix = f"{note_id}_" if note_id else ""
         image_paths = []
 
         for i, img_url in enumerate(image_urls):
@@ -287,7 +290,7 @@ class DouyinProcessor:
             else:
                 ext = "jpg"
 
-            filename = f"image_{i + 1:03d}.{ext}"
+            filename = f"{prefix}image_{i + 1:03d}.{ext}"
             filepath = output_dir / filename
 
             try:
